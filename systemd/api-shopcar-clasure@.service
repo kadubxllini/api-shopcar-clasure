@@ -1,0 +1,21 @@
+[Unit]
+Description=API Shopcar Clasure worker for %i
+After=network-online.target api-shopcar-clasure.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shopcar
+WorkingDirectory=/opt/api-shopcar-clasure
+Environment=IMPORTER_WORKER_CONFIG=/opt/api-shopcar-clasure/companies/%i/worker.json
+ExecStart=/usr/bin/node worker.mjs
+Restart=on-failure
+RestartSec=10
+MemoryMax=160M
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

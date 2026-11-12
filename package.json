@@ -1,0 +1,20 @@
+{
+  "name": "api-shopcar-clasure",
+  "version": "1.0.0",
+  "description": "API de importação de anúncios Shopcar com configurações por empresa e fila de captura.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "worker": "node worker.mjs",
+    "test": "node --test --test-concurrency=1 company.test.mjs test.mjs worker.test.mjs http.test.mjs network.test.mjs",
+    "company:add": "node scripts/company-add.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.66.0-alpha-2026-11-09"
+  }
+}

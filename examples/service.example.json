@@ -1,0 +1,5 @@
+{
+  "stateDir": "/absolute/path/to/api-shopcar-clasure/runtime/state",
+  "port": 4381,
+  "clients": []
+}

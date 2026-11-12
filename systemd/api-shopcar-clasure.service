@@ -1,0 +1,25 @@
+[Unit]
+Description=API Shopcar Clasure capture service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shopcar
+WorkingDirectory=/opt/api-shopcar-clasure
+Environment=IMPORTER_CONFIG=/opt/api-shopcar-clasure/runtime/service.json
+Environment=HOME=/opt/api-shopcar-clasure/runtime/state
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/api-shopcar-clasure/runtime/browsers
+ExecStart=/usr/bin/xvfb-run -a /usr/bin/node server.mjs
+Restart=on-failure
+RestartSec=10
+MemoryMax=900M
+TasksMax=160
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/api-shopcar-clasure/runtime
+
+[Install]
+WantedBy=multi-user.target

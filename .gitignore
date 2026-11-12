@@ -1,0 +1,21 @@
+node_modules/
+state/
+*.log
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+config.json
+service.json
+worker.json
+token.txt
+
+# Company data and runtime never belong to the public source.
+companies/*
+!companies/README.md
+runtime/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
