@@ -135,8 +135,13 @@ Somente URLs HTTPS do Shopcar são aceitas para anúncios. Recursos auxiliares u
 lista exata de hosts Shopcar e Cloudflare necessários (`challenges.cloudflare.com`,
 `cloudflareinsights.com`, `static.cloudflareinsights.com`), sem subdomínios arbitrários.
 Protocolo, credenciais, porta e endereços resolvidos são validados na requisição inicial
-e em cada redirect, inclusive de scripts, fetch e iframes. Um salto proibido é abortado
-antes de ser seguido; o navegador não recebe uma exceção geral para recursos de terceiros. As chaves identificam o cliente e seu limite;
+e em cada redirect, inclusive de scripts, fetch e iframes. Um túnel de saída interno,
+ligado somente a uma porta efêmera de loopback, aplica essa política também aos frames
+isolados e workers do Chromium e conecta diretamente ao IP validado. O TLS entre Chromium
+e o portal não é interceptado nem reescrito. HTTP simples, destinos locais, portas diferentes
+de 443 e hosts fora da lista são recusados. QUIC e UDP WebRTC sem proxy são desabilitados
+para essa instância de navegador. Isso não é um proxy externo/rotativo ou serviço para
+contornar proteção; é uma barreira local de destinos, além da validação CDP. As chaves identificam o cliente e seu limite;
 a instância atual compartilha navegador, cache e métricas e não oferece isolamento forte
 entre locatários. Use instâncias separadas se esse isolamento for requisito do seu produto.
 
@@ -163,7 +168,7 @@ npm test
 ```
 
 A suíte usa dados sintéticos e servidores locais, sem estoque real. Os testes de navegador
-precisam de Chromium instalado e Xvfb. Para um executável já disponível no host:
+precisam de Chromium instalado, Xvfb e OpenSSL para os certificados sintéticos dos testes. Para um executável já disponível no host:
 
 ```bash
 CHROMIUM_EXECUTABLE_PATH=/caminho/para/chrome npm test

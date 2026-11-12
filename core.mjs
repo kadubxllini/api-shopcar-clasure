@@ -17,7 +17,7 @@ export function validateUrl(value, allowedHosts = SHOPCAR_HOSTS) {
   url.hash = '';
   return url.href;
 }
-export async function validateDestination(value, allowedHosts = SHOPCAR_HOSTS) {
+async function resolveDestination(value, allowedHosts) {
   const url = validateUrl(value, allowedHosts);
   let timer;
   let addresses;
@@ -35,10 +35,16 @@ export async function validateDestination(value, allowedHosts = SHOPCAR_HOSTS) {
       || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
       || (a === 100 && b >= 64 && b <= 127) || (a === 198 && [18, 19].includes(b));
   })) throw failure('REJECTED_URL');
-  return url;
+  return { url, addresses };
+}
+export async function validateDestination(value, allowedHosts = SHOPCAR_HOSTS) {
+  return (await resolveDestination(value, allowedHosts)).url;
 }
 export function validateResourceDestination(value) {
   return validateDestination(value, RESOURCE_HOSTS);
+}
+export function resolveResourceDestination(value) {
+  return resolveDestination(value, RESOURCE_HOSTS);
 }
 export function authorized(header, clients) {
   if (!/^Bearer [a-f0-9]{64}$/.test(header || '')) return null;

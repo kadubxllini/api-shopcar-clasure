@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node server.mjs",
     "worker": "node worker.mjs",
-    "test": "node --test --test-concurrency=1 company.test.mjs test.mjs worker.test.mjs http.test.mjs network.test.mjs",
+    "test": "node --test --test-concurrency=1 company.test.mjs test.mjs worker.test.mjs http.test.mjs network.test.mjs egress-proxy.test.mjs",
     "company:add": "node scripts/company-add.mjs"
   },
   "dependencies": {

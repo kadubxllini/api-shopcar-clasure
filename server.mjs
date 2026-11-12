@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { guardPage } from './network.mjs';
+import { startEgressProxy } from './egress-proxy.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -14,6 +15,7 @@ db.exec('CREATE TABLE IF NOT EXISTS cache (url TEXT PRIMARY KEY, html TEXT NOT N
 const parser = readFileSync(new URL('./parser.mjs', import.meta.url), 'utf8')
   .replace('export { parseShopcarHtml };', 'globalThis.shopcarParser = { parseShopcarHtml };');
 let browser;
+let egressProxy;
 let lastCode = null;
 let blockedNavigation = false;
 const allowedPages = new WeakSet();
@@ -33,11 +35,17 @@ async function settled(page, ms) {
 }
 async function context() {
   if (!browser) {
-    browser = await chromium.launchPersistentContext(`${config.stateDir}/profile`, {
-      headless: false, chromiumSandbox: true, timeout: 10000, executablePath: config.executablePath || undefined,
-      acceptDownloads: false, serviceWorkers: 'block', viewport: { width: 1280, height: 800 }
-    });
-    browser.on('close', () => { browser = null; });
+    egressProxy = await startEgressProxy();
+    try {
+      browser = await chromium.launchPersistentContext(`${config.stateDir}/profile`, {
+        headless: false, chromiumSandbox: true, timeout: 10000, executablePath: config.executablePath || undefined,
+        proxy: { server: egressProxy.server, bypass: '<-loopback>' },
+        args: ['--disable-quic', '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'],
+        acceptDownloads: false, serviceWorkers: 'block', viewport: { width: 1280, height: 800 }
+      });
+    } catch (error) { await egressProxy.close(); egressProxy = null; throw error; }
+    const proxy = egressProxy;
+    browser.on('close', () => { browser = null; void proxy.close(); });
     await browser.route('**/*', async route => {
       let mainDocument = false;
       try {
