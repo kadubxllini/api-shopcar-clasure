@@ -1,8 +1,9 @@
-import { MAX_HTML, failure, validateDestination } from './core.mjs';
+import { MAX_HTML, failure, validateDestination, validateResourceDestination } from './core.mjs';
 
 // CDP pauses response headers before following redirects omitted by Playwright routes.
 // https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#event-requestPaused
-export async function guardPage(context, page, onFailure, validate = validateDestination) {
+export async function guardPage(context, page, onFailure,
+  validate = (url, mainDocument) => mainDocument ? validateDestination(url) : validateResourceDestination(url)) {
   const cdp = await context.newCDPSession(page);
   const { frameTree } = await cdp.send('Page.getFrameTree');
   let requests = 0;
@@ -17,12 +18,11 @@ export async function guardPage(context, page, onFailure, validate = validateDes
       const length = responseHeaders?.find(header => header.name.toLowerCase() === 'content-length')?.value;
       if (Number(length || 0) > MAX_HTML) { fail('PARSE_FAILED'); return; }
       const location = responseHeaders?.find(header => header.name.toLowerCase() === 'location')?.value;
-      // Only the main document redirect matters for SSRF. Third-party hops (including
-      // Cloudflare challenge assets) must pass through, or a real page can never load.
-      if (resourceType === 'Document' && frameId === frameTree.frame.id
-        && responseStatusCode >= 300 && responseStatusCode < 400 && location) {
-        if (++redirects > 3) throw failure('REJECTED_URL');
-        await validate(new URL(location, request.url).href);
+      const mainDocument = resourceType === 'Document' && frameId === frameTree.frame.id;
+      // Playwright routes see only the first URL: validate every resource's next hop here.
+      if (responseStatusCode >= 300 && responseStatusCode < 400 && location) {
+        if (mainDocument && ++redirects > 3) throw failure('REJECTED_URL');
+        await validate(new URL(location, request.url).href, mainDocument);
       }
       await cdp.send('Fetch.continueResponse', { requestId });
     } catch (error) {

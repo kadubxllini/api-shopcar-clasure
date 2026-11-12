@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from 'playwright';
-import { failure, validateUrl, validateDestination, authorized, classify, challengePage, SerialQueue, validateServiceConfig, loadPrivateConfig } from './core.mjs';
+import { failure, validateUrl, validateDestination, validateResourceDestination, authorized, classify, challengePage, SerialQueue, validateServiceConfig, loadPrivateConfig } from './core.mjs';
 
 const config = loadPrivateConfig(process.env.IMPORTER_CONFIG, validateServiceConfig);
 mkdirSync(config.stateDir, { recursive: true, mode: 0o700 });
@@ -21,7 +21,6 @@ const queue = new SerialQueue();
 const metrics = { success: 0, blocked: 0, timeout: 0, failed: 0, totalMs: 0 };
 // Managed challenges need their own scripts; blocking them guarantees a permanent challenge page.
 const CHALLENGE_TITLE = /Just a moment|Verificando|Checking your browser|Um momento/i;
-const CHALLENGE_HOSTS = /(^|\.)(challenges\.cloudflare\.com|cloudflareinsights\.com)$/i;
 
 async function settled(page, ms) {
   const deadline = Date.now() + ms;
@@ -40,19 +39,20 @@ async function context() {
     });
     browser.on('close', () => { browser = null; });
     await browser.route('**/*', async route => {
+      let mainDocument = false;
       try {
         const request = route.request();
         if (!allowedPages.has(request.frame().page()) || request.method() !== 'GET'
           || ['image', 'media', 'font', 'stylesheet'].includes(request.resourceType())) return await route.abort();
-        const host = new URL(request.url()).hostname;
-        if (!['shopcar.com.br', 'www.shopcar.com.br'].includes(host)) {
-          if (CHALLENGE_HOSTS.test(host)) return await route.continue();
-          if (request.isNavigationRequest()) blockedNavigation = true;
-          return await route.abort();
-        }
-        await validateDestination(request.url());
+        mainDocument = request.isNavigationRequest() && request.frame() === request.frame().page().mainFrame();
+        if (mainDocument) {
+          await validateDestination(request.url());
+        } else await validateResourceDestination(request.url());
         await route.continue();
-      } catch { await route.abort().catch(() => {}); }
+      } catch (error) {
+        if (mainDocument && error.code === 'REJECTED_URL') blockedNavigation = true;
+        await route.abort().catch(() => {});
+      }
     });
     await browser.routeWebSocket('**/*', socket => socket.close());
     // Keep the service's initial blank tab alive; close only per-job pages below.

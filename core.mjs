@@ -4,19 +4,21 @@ import { isIP } from 'node:net';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const MAX_HTML = 5 * 1024 * 1024;
+const SHOPCAR_HOSTS = ['shopcar.com.br', 'www.shopcar.com.br'];
+const RESOURCE_HOSTS = [...SHOPCAR_HOSTS, 'challenges.cloudflare.com', 'cloudflareinsights.com', 'static.cloudflareinsights.com'];
 export function failure(code) { return Object.assign(new Error(code), { code }); }
-export function validateUrl(value) {
+export function validateUrl(value, allowedHosts = SHOPCAR_HOSTS) {
   // eslint-disable-next-line no-control-regex
   if (typeof value !== 'string' || value.length > 2048 || /[\s\\\u0000-\u001f\u007f]/.test(value)) throw failure('REJECTED_URL');
   let url;
   try { url = new URL(value); } catch { throw failure('REJECTED_URL'); }
-  if (url.protocol !== 'https:' || !['shopcar.com.br', 'www.shopcar.com.br'].includes(url.hostname)
+  if (url.protocol !== 'https:' || !allowedHosts.includes(url.hostname)
     || url.username || url.password || url.port) throw failure('REJECTED_URL');
   url.hash = '';
   return url.href;
 }
-export async function validateDestination(value) {
-  const url = validateUrl(value);
+export async function validateDestination(value, allowedHosts = SHOPCAR_HOSTS) {
+  const url = validateUrl(value, allowedHosts);
   let timer;
   let addresses;
   try {
@@ -34,6 +36,9 @@ export async function validateDestination(value) {
       || (a === 100 && b >= 64 && b <= 127) || (a === 198 && [18, 19].includes(b));
   })) throw failure('REJECTED_URL');
   return url;
+}
+export function validateResourceDestination(value) {
+  return validateDestination(value, RESOURCE_HOSTS);
 }
 export function authorized(header, clients) {
   if (!/^Bearer [a-f0-9]{64}$/.test(header || '')) return null;

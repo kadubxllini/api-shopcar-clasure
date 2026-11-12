@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { validateUrl, authorized, classify, challengePage, SerialQueue } from './core.mjs';
+import { validateUrl, authorized, classify, challengePage, SerialQueue, validateResourceDestination } from './core.mjs';
 
 test('URL boundary rejects SSRF, credentials, protocol, port and deceptive hosts', () => {
   for (const url of ['http://shopcar.com.br/', 'https://shopcar.com.br:81/', 'https://a@shopcar.com.br/',
@@ -44,4 +44,14 @@ test('one job at a time, bounded queue, failure does not poison subsequent jobs'
   assert.equal(await second, 42);
   queue.pending = 10;
   await assert.rejects(queue.enqueue(run), { code: 'UNAVAILABLE' });
+});
+
+
+test('resource destinations reject unsafe protocols, private IPs, credentials and wildcard subdomains', async () => {
+  for (const url of ['http://challenges.cloudflare.com/script.js', 'https://user@challenges.cloudflare.com/script.js',
+    'https://challenges.cloudflare.com:8443/script.js', 'https://challenges.cloudflare.com.evil.test/script.js',
+    'https://evil.challenges.cloudflare.com/script.js', 'https://evil.cloudflareinsights.com/script.js',
+    'https://127.0.0.1/metadata', 'http://169.254.169.254/', 'file:///etc/passwd', 'data:text/javascript,alert(1)']) {
+    await assert.rejects(validateResourceDestination(url), { code: 'REJECTED_URL' });
+  }
 });

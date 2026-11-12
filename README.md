@@ -131,7 +131,12 @@ Todas as rotas exigem `Authorization: Bearer <importerToken>`:
 
 A resposta inclui `vehicle`, `source` e `warnings`; `raw: true` inclui também `html`.
 Códigos: `REJECTED_URL`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `PARSE_FAILED`, `UNAVAILABLE`.
-Somente URLs HTTPS do Shopcar são aceitas. As chaves identificam o cliente e seu limite;
+Somente URLs HTTPS do Shopcar são aceitas para anúncios. Recursos auxiliares usam uma
+lista exata de hosts Shopcar e Cloudflare necessários (`challenges.cloudflare.com`,
+`cloudflareinsights.com`, `static.cloudflareinsights.com`), sem subdomínios arbitrários.
+Protocolo, credenciais, porta e endereços resolvidos são validados na requisição inicial
+e em cada redirect, inclusive de scripts, fetch e iframes. Um salto proibido é abortado
+antes de ser seguido; o navegador não recebe uma exceção geral para recursos de terceiros. As chaves identificam o cliente e seu limite;
 a instância atual compartilha navegador, cache e métricas e não oferece isolamento forte
 entre locatários. Use instâncias separadas se esse isolamento for requisito do seu produto.
 
